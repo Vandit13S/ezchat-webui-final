@@ -1,6 +1,7 @@
 import requests
 import logging
 import ftfy
+import pandas as pd
 
 from langchain_community.document_loaders import (
     BSHTMLLoader,
@@ -112,6 +113,39 @@ class TikaLoader:
         else:
             raise Exception(f"Error calling Tika: {r.reason}")
 
+class CustomExcelLoader:
+    def __init__(self, file_path: str):
+        self.file_path = file_path
+
+    def load(self) -> list[Document]:
+        try:
+            # Read all sheets from the Excel file
+            excel_file = pd.ExcelFile(self.file_path)
+            documents = []
+
+            for sheet_name in excel_file.sheet_names:
+                df = pd.read_excel(self.file_path, sheet_name=sheet_name)
+                
+                # Convert DataFrame to string representation
+                content = f"Sheet: {sheet_name}\n"
+                content += df.to_string(index=False)
+                
+                # Create a Document for each sheet
+                doc = Document(
+                    page_content=content,
+                    metadata={
+                        "source": self.file_path,
+                        "sheet_name": sheet_name,
+                        "row_count": len(df),
+                        "column_count": len(df.columns)
+                    }
+                )
+                documents.append(doc)
+            
+            return documents
+        except Exception as e:
+            logging.error(f"Error loading Excel file: {str(e)}")
+            raise
 
 class Loader:
     def __init__(self, engine: str = "", **kwargs):
@@ -172,7 +206,7 @@ class Loader:
                 "application/vnd.ms-excel",
                 "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
             ] or file_ext in ["xls", "xlsx"]:
-                loader = UnstructuredExcelLoader(file_path)
+                loader = CustomExcelLoader(file_path)
             elif file_content_type in [
                 "application/vnd.ms-powerpoint",
                 "application/vnd.openxmlformats-officedocument.presentationml.presentation",

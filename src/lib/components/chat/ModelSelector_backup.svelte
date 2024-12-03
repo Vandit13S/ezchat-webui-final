@@ -14,7 +14,6 @@
 	export let disabled = false;
 
 	export let showSetDefault = true;
-	export let maxModels = 2; // You can adjust this number as needed
 
 	const saveDefaultModel = async () => {
 		const hasEmptyModel = selectedModels.filter((it) => it === '');
@@ -62,13 +61,9 @@
 				>
 					<Tooltip content={$i18n.t('Add Model')}>
 						<button
-							class=""
-							disabled={selectedModels.length >= maxModels || disabled}
+							class=" "
+							{disabled}
 							on:click={() => {
-								if (selectedModels.length >= maxModels) {
-									toast.error($i18n.t('Maximum {{max}} models allowed', { max: maxModels }));
-									return;
-								}
 								selectedModels = [...selectedModels, ''];
 							}}
 							aria-label="Add Model"
@@ -80,7 +75,7 @@
 								stroke-width="2"
 								stroke="currentColor"
 								class="size-3.5"
-								>
+							>
 								<path stroke-linecap="round" stroke-linejoin="round" d="M12 6v12m6-6H6" />
 							</svg>
 						</button>
@@ -92,7 +87,7 @@
 				>
 					<Tooltip content={$i18n.t('Remove Model')}>
 						<button
-							disabled={selectedModels.length >= maxModels || disabled}
+							{disabled}
 							on:click={() => {
 								selectedModels.splice(selectedModelIdx, 1);
 								selectedModels = selectedModels;
@@ -122,4 +117,3 @@
 		<button on:click={saveDefaultModel}> {$i18n.t('Set as default')}</button>
 	</div>
 {/if}
-
