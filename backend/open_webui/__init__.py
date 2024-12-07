@@ -13,7 +13,7 @@ KEY_FILE = Path.cwd() / ".webui_secret_key"
 
 @app.command()
 def serve(
-    host: str = "0.0.0.0",
+    host: str = "127.0.0.1",
     port: int = 8080,
 ):
     os.environ["FROM_INIT_PY"] = "true"

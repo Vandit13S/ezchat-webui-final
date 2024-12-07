@@ -40,15 +40,8 @@ router = APIRouter()
 
 @router.post("/", response_model=FileModelResponse)
 def upload_file(file: UploadFile = File(...), user=Depends(get_verified_user)):
-    import time
-    start_time = time.time()
-    log.info(f"Start time: {start_time}")
-    log.info(f"[1] Starting upload for file: {file.filename} ({file.content_type})")
     log.info(f"file.content_type: {file.content_type}")
     try:
-        # After Storage.upload_file
-        upload_start = time.time()
-        log.info(f"[2] Upload start time: {upload_start}")
         unsanitized_filename = file.filename
         filename = os.path.basename(unsanitized_filename)
 
@@ -57,7 +50,6 @@ def upload_file(file: UploadFile = File(...), user=Depends(get_verified_user)):
         name = filename
         filename = f"{id}_{filename}"
         contents, file_path = Storage.upload_file(file.file, filename)
-        log.info(f"[3] File storage took: {time.time() - upload_start:.2f} seconds")
 
         file_item = Files.insert_new_file(
             user.id,
@@ -76,12 +68,8 @@ def upload_file(file: UploadFile = File(...), user=Depends(get_verified_user)):
         )
 
         try:
-            process_start = time.time()
-            log.info(f"[4] Process start time: {process_start}")
             process_file(ProcessFileForm(file_id=id))
             file_item = Files.get_file_by_id(id=id)
-            log.info(f"[5] Process took: {time.time() - process_start:.2f} seconds")
-            log.info(f"[6] Total upload process took: {time.time() - start_time:.2f} seconds")
         except Exception as e:
             log.exception(e)
             log.error(f"Error processing file: {file_item.id}")

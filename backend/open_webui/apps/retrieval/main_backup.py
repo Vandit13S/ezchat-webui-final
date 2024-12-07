@@ -667,6 +667,8 @@ async def update_rag_config(form_data: ConfigUpdateForm, user=Depends(get_admin_
             },
         },
     }
+
+
 @app.get("/template")
 async def get_rag_template(user=Depends(get_verified_user)):
     return {
@@ -879,14 +881,11 @@ def process_file(
     form_data: ProcessFileForm,
     user=Depends(get_verified_user),
 ):
-    import time
-    process_start = time.time()
-    log.info(f"[5] Starting file processing for ID: {form_data.file_id}")
     try:
         file = Files.get_file_by_id(form_data.file_id)
 
         collection_name = form_data.collection_name
-        
+
         if collection_name is None:
             collection_name = f"file-{file.id}"
 
@@ -908,11 +907,8 @@ def process_file(
                     },
                 )
             ]
-            extraction_start = time.time()
-            log.info(f"[6] Extraction start time: {extraction_start}")
+
             text_content = form_data.content
-            extraction_end = time.time()
-            log.info(f"[7] Content extraction took: {extraction_end - extraction_start:.2f} seconds")
         elif form_data.collection_name:
             # Check if the file has already been processed and save the content
             # Usage: /knowledge/{id}/file/add, /knowledge/{id}/file/update
@@ -942,17 +938,15 @@ def process_file(
                         },
                     )
                 ]
-            extraction_start = time.time()
-            log.info(f"[6] Extraction start time: {extraction_start}")
+
             text_content = file.data.get("content", "")
-            extraction_end = time.time()
-            log.info(f"[7] Content extraction took: {extraction_end - extraction_start:.2f} seconds")
         else:
             # Process the file and save the content
             # Usage: /files/
             file_path = file.path
             if file_path:
                 file_path = Storage.get_file(file_path)
+		# Log content extraction time
                 loader = Loader(
                     engine=app.state.config.CONTENT_EXTRACTION_ENGINE,
                     TIKA_SERVER_URL=app.state.config.TIKA_SERVER_URL,
@@ -961,7 +955,6 @@ def process_file(
                 docs = loader.load(
                     file.filename, file.meta.get("content_type"), file_path
                 )
-
                 docs = [
                     Document(
                         page_content=doc.page_content,
@@ -988,23 +981,18 @@ def process_file(
                         },
                     )
                 ]
-            extraction_start = time.time()
-            log.info(f"[6] Extraction start time: {extraction_start}")
             text_content = " ".join([doc.page_content for doc in docs])
-            extraction_end = time.time()
-            log.info(f"[7] Content extraction took: {extraction_end - extraction_start:.2f} seconds")
 
         log.debug(f"text_content: {text_content}")
         Files.update_file_data_by_id(
             file.id,
             {"content": text_content},
         )
-
+	
         hash = calculate_sha256_string(text_content)
         Files.update_file_hash_by_id(file.id, hash)
 
         try:
-            vector_start = time.time()
             result = save_docs_to_vector_db(
                 docs=docs,
                 collection_name=collection_name,
@@ -1015,7 +1003,6 @@ def process_file(
                 },
                 add=(True if form_data.collection_name else False),
             )
-            log.info(f"[8] Vector DB operations took: {time.time() - vector_start:.2f} seconds")
             if result:
                 Files.update_file_metadata_by_id(
                     file.id,
@@ -1083,6 +1070,8 @@ def process_text(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=ERROR_MESSAGES.DEFAULT(),
         )
+
+
 @app.post("/process/youtube")
 def process_youtube_video(form_data: ProcessUrlForm, user=Depends(get_verified_user)):
     try:
